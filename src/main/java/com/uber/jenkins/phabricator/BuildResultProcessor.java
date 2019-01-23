@@ -36,9 +36,7 @@ import com.uber.jenkins.phabricator.unit.UnitResults;
 import com.uber.jenkins.phabricator.unit.UnitTestProvider;
 import com.uber.jenkins.phabricator.utils.CommonUtils;
 import com.uber.jenkins.phabricator.utils.Logger;
-import hudson.FilePath;
-import hudson.model.Result;
-import hudson.model.Run;
+
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
@@ -47,6 +45,10 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
+
+import hudson.FilePath;
+import hudson.model.Result;
+import hudson.model.Run;
 
 public class BuildResultProcessor {
 
@@ -60,8 +62,8 @@ public class BuildResultProcessor {
     private final boolean runHarbormaster;
     private final FilePath workspace;
     private final Run<?, ?> build;
-    private String commentAction;
     private final CommentBuilder commenter;
+    private String commentAction;
     private UnitResults unitResults;
     private Map<String, String> harbormasterCoverage;
     private LintResults lintResults;
@@ -79,12 +81,14 @@ public class BuildResultProcessor {
         this.workspace = workspace;
 
         this.commentAction = "none";
-        this.commenter = new CommentBuilder(logger, build.getResult(), coverageResult, buildUrl, preserveFormatting,
-            coverageCheckSettings);
+        this.commenter = new CommentBuilder(logger, coverageResult, buildUrl, preserveFormatting,
+                coverageCheckSettings);
         this.runHarbormaster = !CommonUtils.isBlank(phid);
     }
 
     public Result getBuildResult() {
+        // In Pipeline jobs, as long as no failure happens, the build status stays null.
+        // The PhabricatorNotifier needs to interpret null as "not failed (yet)".
         if (this.build.getResult() == null) {
             return Result.SUCCESS;
         } else {
@@ -96,7 +100,6 @@ public class BuildResultProcessor {
      * Fetch parent coverage data from Uberalls, if available
      *
      * @param uberalls the client to the Uberalls instance
-     *
      * @return
      */
     public boolean processParentCoverage(UberallsClient uberalls) {
@@ -105,7 +108,7 @@ public class BuildResultProcessor {
         if (commenter.hasCoverageAvailable()) {
             if (uberalls.isConfigured()) {
                 passBuild = commenter.processParentCoverage(uberalls.getParentCoverage(diff.getBaseCommit()),
-                    diff.getBaseCommit(), diff.getBranch());
+                        diff.getBaseCommit(), diff.getBranch());
             } else {
                 logger.info(LOGGING_TAG, "No Uberalls backend configured, skipping...");
             }
@@ -118,11 +121,11 @@ public class BuildResultProcessor {
     /**
      * Add build result data into the commenter
      *
-     * @param commentOnSuccess                whether a "success" should trigger a comment
+     * @param commentOnSuccess whether a "success" should trigger a comment
      * @param commentWithConsoleLinkOnFailure whether a failure should trigger a console link
      */
     public void processBuildResult(boolean commentOnSuccess, boolean commentWithConsoleLinkOnFailure) {
-        commenter.processBuildResult(commentOnSuccess, commentWithConsoleLinkOnFailure, runHarbormaster);
+        commenter.processBuildResult(getBuildResult(), commentOnSuccess, commentWithConsoleLinkOnFailure, runHarbormaster);
     }
 
     /**
@@ -146,7 +149,7 @@ public class BuildResultProcessor {
     /**
      * Fetch remote lint violations from the build workspace and process
      *
-     * @param lintFile     the path pattern of the file
+     * @param lintFile the path pattern of the file
      * @param lintFileSize maximum number of bytes to read from the remote file
      */
     public void processLintResults(String lintFile, String lintFileSize) {
@@ -292,13 +295,13 @@ public class BuildResultProcessor {
             logger.info(LOGGING_TAG, "No coverage provider available.");
             return;
         }
-        Map<String, List<Integer>> lineCoverage = coverageProvider.readLineCoverage();
+        Map<String, List<Integer>> lineCoverage = coverageProvider.getLineCoverage();
         if (lineCoverage == null || lineCoverage.isEmpty()) {
             logger.info(LOGGING_TAG, "No line coverage available to post to Harbormaster.");
             return;
         }
 
-        harbormasterCoverage = new CoverageConverter().convert(lineCoverage);
+        harbormasterCoverage = CoverageConverter.convert(lineCoverage);
     }
 
     public Map<String, String> getCoverage() {

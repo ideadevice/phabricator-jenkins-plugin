@@ -78,7 +78,7 @@ Jenkins Job
   2. Click the **Add post-build action** button and select **Post to Phabricator**.
   3. Make sure the **Comment on Success** and **Comment with console link on Failure** checkboxes are selected.
   4. Optionally:
-    1. If you have [Uberalls](https://github.com/uber/uberalls) enabled, enter a path to scan for Cobertura reports.
+    1. If you have [Uberalls](https://github.com/uber/uberalls) enabled, enter a path to scan for Coverage reports.
     2. If you want to post additional text to Phabricator other than "Pass" and "Fail", select the **Add Custom Comment** checkbox. Then create a `.phabricator-comment` file and enter the text you want Jenkins to add to the build status comment in Phabricator.
 ![Add post-build action](/docs/configure-job-post-build.png)
 
@@ -88,10 +88,10 @@ Harbormaster
 With Phabricator, Jenkins, and your Jenkins jobs configured it's time to configure a new Harbormaster build plan. This build plan will trigger the Jenkins job using a Herald rule that will be configured in the next section.
 
 1. Navigate to `https://phabricator.example/harbormaster/plan/` with your base Phabricator URL in place of `phabricator.example`.
-2. Click the **New Build Plan** button in the top right corner of the page.
+2. Click the **Create Build Plan** button in the top right corner of the page.
 3. Enter a name for the build plan in the **Plan Name** field. For these instructions, we'll use "test-example" as the build name.
 4. Click the **Create Build Plan** button.
-5. Click the **Add Build Step button**.
+5. Click the **Add Build Step** button.
 6. Click the **Make HTTP Request** step.
 7. Use this template URI to fill in the URI field for the build plan: `https://ci.example.com/buildByToken/buildWithParameters?job=test-example&DIFF_ID=${buildable.diff}&PHID=${target.phid}`
 
