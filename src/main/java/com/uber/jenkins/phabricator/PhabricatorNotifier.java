@@ -346,9 +346,9 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         } else {
             buildResult = build.getResult();
         }
-        if (!buildResult.isBetterOrEqualTo(Result.UNSTABLE)) {
-            return null;
-        }
+        // if (!buildResult.isBetterOrEqualTo(Result.UNSTABLE)) {
+        //     return null;
+        // }
 
         copyCoverageToJenkinsMaster(build, workspace, listener);
 
