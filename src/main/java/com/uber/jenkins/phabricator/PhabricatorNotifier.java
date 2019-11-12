@@ -90,6 +90,9 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
     private final String lintFile;
     private final String lintFileSize;
     private final String coverageReportPattern;
+    private String gitUrl;
+    private String gitCommit;
+    private String gitBranch;
     private transient UberallsClient uberallsClient;
 
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
@@ -99,7 +102,8 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
             double coverageThreshold, double minCoverageThreshold, String coverageReportPattern,
             boolean preserveFormatting, String commentFile, String commentSize,
             boolean commentWithConsoleLinkOnFailure, boolean customComment, boolean processLint,
-            String lintFile, String lintFileSize) {
+            String lintFile, String lintFileSize,
+            String gitUrl, String gitCommit, String gitBranch) {
         this.commentOnSuccess = commentOnSuccess;
         this.uberallsEnabled = uberallsEnabled;
         this.coverageCheckSettings = new CoverageCheckSettings(coverageCheck, coverageThreshold, minCoverageThreshold);
@@ -112,6 +116,9 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         this.customComment = customComment;
         this.processLint = processLint;
         this.coverageReportPattern = coverageReportPattern;
+        this.gitUrl = gitUrl;
+        this.gitCommit = gitCommit;
+        this.gitBranch = gitBranch;
     }
 
     public BuildStepMonitor getRequiredMonitorService() {
@@ -125,13 +132,16 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         EnvVars environment = build.getEnvironment(listener);
         Logger logger = new Logger(listener.getLogger());
 
-        final String branch = environment.get("GIT_BRANCH");
-        String gitUrl = environment.get("GIT_URL");
-        if (gitUrl == null) {
-            gitUrl = environment.get("GIT_URL_1");
+        if (this.gitBranch == null)
+            this.gitBranch = environment.get("GIT_BRANCH");
+        if (this.gitUrl == null) {
+            this.gitUrl = environment.get("GIT_URL");
+            if (this.gitUrl == null) {
+                this.gitUrl = environment.get("GIT_URL_1");
+            }
         }
 
-        final UberallsClient uberallsClient = getUberallsClient(logger, gitUrl, branch);
+        final UberallsClient uberallsClient = getUberallsClient(logger, this.gitUrl, this.gitBranch);
 
         final boolean needsDecoration = build.getActions(PhabricatorPostbuildAction.class).size() == 0;
 
@@ -159,7 +169,7 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         // So only skip build result processing if both are blank (e.g. master runs to update coverage data)
         if (CommonUtils.isBlank(phid) && !isDifferential) {
             if (needsDecoration) {
-                build.addAction(PhabricatorPostbuildAction.createShortText(branch, null));
+                build.addAction(PhabricatorPostbuildAction.createShortText(this.gitBranch, null));
             }
 
             coverageProvider = getCoverageProvider(build, workspace, listener, Collections.emptySet());
@@ -173,7 +183,7 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
                     uberallsClient,
                     coverageResult,
                     uberallsEnabled,
-                    environment.get("GIT_COMMIT")
+                    this.gitCommit
             );
 
             // Ignore the result.
