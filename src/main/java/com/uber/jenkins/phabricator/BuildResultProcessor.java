@@ -172,6 +172,7 @@ public class BuildResultProcessor {
                     }
                 }
             }
+            logger.info(LOGGING_TAG, "Lint results processed");
         } catch (InterruptedException e) {
             e.printStackTrace(logger.getStream());
         } catch (IOException e) {
@@ -196,6 +197,8 @@ public class BuildResultProcessor {
         }
 
         new PostCommentTask(logger, diffClient, diff.getRevisionID(false), commenter.getComment(), commentAction).run();
+        logger.info(LOGGING_TAG, "Comment sent to phabricator");
+
     }
 
     /**
@@ -255,6 +258,7 @@ public class BuildResultProcessor {
                     lintResults
             ).run();
             if (result != Task.Result.SUCCESS) {
+                logger.info(LOGGING_TAG, "Could not post results");
                 return false;
             }
         } else {
@@ -297,7 +301,7 @@ public class BuildResultProcessor {
         }
         Map<String, List<Integer>> lineCoverage = coverageProvider.getLineCoverage();
         if (lineCoverage == null || lineCoverage.isEmpty()) {
-            logger.info(LOGGING_TAG, "No line coverage available to post to Harbormaster.");
+            logger.info(LOGGING_TAG, "No line coverage available to post to Harbormaster, continue");
             return;
         }
 
