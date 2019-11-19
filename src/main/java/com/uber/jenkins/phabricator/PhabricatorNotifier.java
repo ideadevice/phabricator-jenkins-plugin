@@ -272,6 +272,7 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         );
 
         if (uberallsEnabled) {
+            logger.info(CONDUIT_TAG, "UberallsEnabled");
             boolean passBuildOnUberalls = resultProcessor.processParentCoverage(uberallsClient);
             if (!passBuildOnUberalls) {
                 build.setResult(Result.FAILURE);
@@ -279,26 +280,33 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         }
 
         // Add in comments about the build result
+        logger.info(CONDUIT_TAG, "processBuildResult");
         resultProcessor.processBuildResult(commentOnSuccess, commentWithConsoleLinkOnFailure);
 
         // Process unit tests results to send to Harbormaster
+        logger.info(CONDUIT_TAG, "processUnitResults");
         resultProcessor.processUnitResults(getUnitProvider(build, listener));
 
         // Read coverage data to send to Harbormaster
+        logger.info(CONDUIT_TAG, "processCoverage");
         resultProcessor.processCoverage(coverageProvider);
 
         if (processLint) {
             // Read lint results to send to Harbormaster
+            logger.info(CONDUIT_TAG, "processLintResults");
             resultProcessor.processLintResults(lintFile, lintFileSize);
         }
 
         // Fail the build if we can't report to Harbormaster
         if (!resultProcessor.processHarbormaster()) {
+            logger.info(CONDUIT_TAG, "processHarbormaster: ABORT");
             throw new AbortException();
         }
 
+        logger.info(CONDUIT_TAG, "processRemoteComment");
         resultProcessor.processRemoteComment(commentFile, commentSize);
 
+        logger.info(CONDUIT_TAG, "sendComment");
         resultProcessor.sendComment(commentWithConsoleLinkOnFailure);
     }
 

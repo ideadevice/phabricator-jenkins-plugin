@@ -186,7 +186,10 @@ public class BuildResultProcessor {
      * @param commentWithConsoleLinkOnFailure whether we should provide a console link on failure
      */
     public void sendComment(boolean commentWithConsoleLinkOnFailure) {
+        logger.info(LOGGING_TAG, "Sending Comment");
+
         if (!commenter.hasComment()) {
+            logger.info(LOGGING_TAG, "No comment to send");
             return;
         }
 
