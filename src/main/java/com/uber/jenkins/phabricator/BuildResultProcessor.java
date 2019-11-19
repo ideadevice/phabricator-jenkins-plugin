@@ -169,13 +169,16 @@ public class BuildResultProcessor {
                         lint = "";
                     } catch (JSONException e) {
                         e.printStackTrace(logger.getStream());
+                        logger.info(LOGGING_TAG, "Caught " + e + " while processing: \n" + line);
                     }
                 }
             }
             logger.info(LOGGING_TAG, "Lint results processed");
         } catch (InterruptedException e) {
+            logger.info(LOGGING_TAG, "Caught " + e + " for InterruptedException");
             e.printStackTrace(logger.getStream());
         } catch (IOException e) {
+            logger.info(LOGGING_TAG, "Caught " + e + " for IOException");
             e.printStackTrace(logger.getStream());
         }
     }
