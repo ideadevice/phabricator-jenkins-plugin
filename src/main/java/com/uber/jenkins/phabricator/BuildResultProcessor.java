@@ -168,8 +168,8 @@ public class BuildResultProcessor {
                         lintResults.add(LintResult.fromJsonObject(json));
                         lint = "";
                     } catch (JSONException e) {
+                        logger.error(LOGGING_TAG, "Caught exception for: " + lint);
                         e.printStackTrace(logger.getStream());
-                        logger.info(LOGGING_TAG, "Caught " + e + " while processing: \n" + line);
                     }
                 }
             }
@@ -306,8 +306,12 @@ public class BuildResultProcessor {
             return;
         }
         Map<String, List<Integer>> lineCoverage = coverageProvider.getLineCoverage();
-        if (lineCoverage == null || lineCoverage.isEmpty()) {
-            logger.info(LOGGING_TAG, "No line coverage available to post to Harbormaster, continue");
+        if (lineCoverage == null) {
+            logger.info(LOGGING_TAG, "No line coverage available to post to Harbormaster, continue 1");
+            return;
+        }
+        if (lineCoverage.isEmpty()) {
+            logger.info(LOGGING_TAG, "No line coverage available to post to Harbormaster, continue 2");
             return;
         }
 

@@ -381,7 +381,14 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
             }
         }
 
-        if (coverageProvider == null) {
+        if (coverageProvider != null && coverageProvider.getLineCoverage() == null) {
+            logger.info(UBERALLS_TAG, "LineCoverage is null ");
+        }
+        if (coverageProvider != null && coverageProvider.getLineCoverage() != null && coverageProvider.getLineCoverage().isEmpty()) {
+            logger.info(UBERALLS_TAG, "LineCoverage is empty ");
+        }
+
+        if (coverageProvider == null || coverageProvider.getLineCoverage() == null || coverageProvider.getLineCoverage().isEmpty()) {
             logger.info(UBERALLS_TAG, "Trying to obtain coverage metrics by parsing coverage xml files");
             coverageProvider = new XmlCoverageProvider(getCoverageReports(build), includeFiles);
         }
