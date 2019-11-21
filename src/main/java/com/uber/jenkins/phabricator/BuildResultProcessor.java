@@ -168,7 +168,7 @@ public class BuildResultProcessor {
                         lintResults.add(LintResult.fromJsonObject(json));
                         lint = "";
                     } catch (JSONException e) {
-                        logger.error(LOGGING_TAG, "Caught exception for: " + lint);
+                        logger.info(LOGGING_TAG, "Caught exception for: " + lint);
                         e.printStackTrace(logger.getStream());
                     }
                 }
