@@ -250,7 +250,9 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
             diff.decorate(build, this.getPhabricatorURL(build.getParent()));
         }
 
-        Set<String> includeFiles = diff.getChangedFiles();
+        // comment out to include all files in coverage calculation
+        // Set<String> includeFiles = diff.getChangedFiles();
+        Set<String> includeFiles = null;
 
         coverageProvider = getCoverageProvider(build, workspace, listener, includeFiles);
         CodeCoverageMetrics coverageResult = null;
@@ -271,6 +273,10 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
                 coverageCheckSettings
         );
 
+        // Add in comments about the build result
+        logger.info(CONDUIT_TAG, "processBuildResult");
+        resultProcessor.processBuildResult(commentOnSuccess, commentWithConsoleLinkOnFailure);
+
         if (uberallsEnabled) {
             logger.info(CONDUIT_TAG, "UberallsEnabled");
             boolean passBuildOnUberalls = resultProcessor.processParentCoverage(uberallsClient);
@@ -278,10 +284,6 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
                 build.setResult(Result.FAILURE);
             }
         }
-
-        // Add in comments about the build result
-        logger.info(CONDUIT_TAG, "processBuildResult");
-        resultProcessor.processBuildResult(commentOnSuccess, commentWithConsoleLinkOnFailure);
 
         // Process unit tests results to send to Harbormaster
         logger.info(CONDUIT_TAG, "processUnitResults");

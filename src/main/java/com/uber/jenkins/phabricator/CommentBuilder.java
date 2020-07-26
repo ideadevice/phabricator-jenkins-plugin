@@ -75,12 +75,11 @@ class CommentBuilder {
      */
     boolean processParentCoverage(CodeCoverageMetrics parentCoverage, String baseCommit, String branchName) {
         boolean passCoverage = true;
+
         if (parentCoverage == null) {
             logger.info(UBERALLS_TAG, "unable to find coverage for parent commit");
             return passCoverage;
         }
-
-        comment.append("\n==== Jenkins Build Results ====\n\n");
 
         Float lineCoveragePercent = currentCoverage.getLineCoveragePercent();
 
@@ -97,14 +96,14 @@ class CommentBuilder {
         logger.info(UBERALLS_TAG, "found parent line coverage on base commit " + baseCommit + " as " + parentDisplay);
 
         if (coverageDelta > 0) {
-            comment.append("Computed line coverage increased from " + parentDisplay + "% (+" + coverageDeltaDisplay + "%) to " + lineCoverageDisplay + "%");
+            comment.append("Line Coverage increased from **" + parentDisplay + "%** (!!+" + coverageDeltaDisplay + "%!!) to **" + lineCoverageDisplay + "%**");
         } else if (coverageDelta < 0) {
-            comment.append("Computed line coverage decreased from " + parentDisplay + "%  (" + coverageDeltaDisplay + "%) to " + lineCoverageDisplay + "%");
+            comment.append("Line Coverage decreased from " + parentDisplay + "%  (!!" + coverageDeltaDisplay + "%!!) to " + lineCoverageDisplay + "%");
         } else {
-            comment.append("Line coverage remained the same (" + lineCoverageDisplay + "%)");
+            comment.append("Line Coverage remained the same (**" + lineCoverageDisplay + "%**)");
         }
 
-        comment.append(" when comparing **" + branchName + "** with diff base commit ");
+        comment.append(" when comparing **" + branchName + "** with review base commit ");
         comment.append(baseCommit.substring(0, 7));
         comment.append(".\n\n");
 
@@ -138,21 +137,26 @@ class CommentBuilder {
             boolean commentOnSuccess,
             boolean commentWithConsoleLinkOnFailure,
             boolean runHarbormaster) {
+
+        comment.append("\n=== Jenkins Build Results\n\n");
+
         if (result == Result.SUCCESS) {
-            if (comment.length() == 0 && (commentOnSuccess || !runHarbormaster)) {
-                comment.append("(NOTE)Build is green");
+            if (commentOnSuccess || !runHarbormaster) {
+                comment.append("(NOTE)Build is green\n");
             }
         } else if (result == Result.UNSTABLE) {
-            comment.append("(WARNING)Build is unstable");
+            comment.append("(WARNING)Build is unstable\n");
         } else if (result == Result.FAILURE) {
             if (!runHarbormaster || commentWithConsoleLinkOnFailure) {
-                comment.append("(WARNING)Build has FAILED");
+                comment.append("(IMPORTANT)Build has FAILED\n");
             }
         } else if (result == Result.ABORTED) {
-            comment.append("(WARNING)Build was aborted");
+            comment.append("(IMPORTANT)Build was aborted\n");
         } else {
+            comment.append("(IMPORTANT)Build status is " + result.toString() + "\n");
             logger.info(UBERALLS_TAG, "Unknown build status " + result.toString());
         }
+        comment.append("\n---\n\n");
     }
 
     /**
