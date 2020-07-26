@@ -369,7 +369,7 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
             CoberturaBuildAction coberturaBuildAction = build.getAction(CoberturaBuildAction.class);
             if (coberturaBuildAction != null) { // Choose only a single coverage provider
                 logger.info(UBERALLS_TAG, "Using coverage metrics from Cobertura Jenkins Plugin");
-                coverageProvider = new CoberturaPluginCoverageProvider(getCoverageReports(build), includeFiles, coberturaBuildAction);
+                coverageProvider = new CoberturaPluginCoverageProvider(getCoverageReports(build, listener), includeFiles, coberturaBuildAction);
             }
         }
 
@@ -377,7 +377,7 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
             JacocoBuildAction jacocoBuildAction = build.getAction(JacocoBuildAction.class);
             if (jacocoBuildAction != null) {
                 logger.info(UBERALLS_TAG, "Using coverage metrics from Jacoco Jenkins Plugin");
-                coverageProvider = new JacocoPluginCoverageProvider(getCoverageReports(build), includeFiles, jacocoBuildAction);
+                coverageProvider = new JacocoPluginCoverageProvider(getCoverageReports(build, listener), includeFiles, jacocoBuildAction);
             }
         }
 
@@ -390,11 +390,11 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
 
         if (coverageProvider == null || coverageProvider.getLineCoverage() == null || coverageProvider.getLineCoverage().isEmpty()) {
             logger.info(UBERALLS_TAG, "Trying to obtain coverage metrics by parsing coverage xml files");
-            coverageProvider = new XmlCoverageProvider(getCoverageReports(build), includeFiles);
+            coverageProvider = new XmlCoverageProvider(getCoverageReports(build, listener), includeFiles);
         }
 
         coverageProvider.computeCoverageIfNeeded();
-        cleanupCoverageFilesOnJenkinsMaster(build);
+        cleanupCoverageFilesOnJenkinsMaster(build, listener);
 
         if (coverageProvider.hasCoverage()) {
             return coverageProvider;
@@ -412,10 +412,13 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         String finalCoverageReportPattern = coverageReportPattern != null ? coverageReportPattern :
                 DEFAULT_XML_COVERAGE_REPORT_PATTERN;
 
+        logger.info(COVERAGE_TAG, "Getting all coverage files with pattern " + finalCoverageReportPattern);
+
         if (workspace != null) {
             try {
                 int i = 0;
                 for (FilePath report : workspace.list(finalCoverageReportPattern)) {
+                    logger.info(COVERAGE_TAG, "Copying coverage file " + report);
                     final FilePath targetPath = new FilePath(buildTarget, PHABRICATOR_COVERAGE + (i == 0 ? "" : i) + ".xml");
                     report.copyTo(targetPath);
                     i++;
@@ -427,18 +430,24 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         }
     }
 
-    private void cleanupCoverageFilesOnJenkinsMaster(Run<?, ?> build) {
-        for (File report : getCoverageReports(build)) {
+    private void cleanupCoverageFilesOnJenkinsMaster(Run<?, ?> build, TaskListener listener) {
+        Logger logger = new Logger(listener.getLogger());
+        for (File report : getCoverageReports(build, listener)) {
+            logger.info(CONDUIT_TAG, "Deleting coverage file " + report.getName());
             report.delete();
         }
     }
 
-    private Set<File> getCoverageReports(Run<?, ?> build) {
+    private Set<File> getCoverageReports(Run<?, ?> build, TaskListener listener) {
+        Logger logger = new Logger(listener.getLogger());
         Set<File> reports = new HashSet<>();
 
         File[] foundReports = build.getRootDir().listFiles(COVERAGE_FILENAME_FILTER);
         if (foundReports != null) {
             Collections.addAll(reports, foundReports);
+            for (File f : foundReports) {
+                logger.info(CONDUIT_TAG, "looking at coverage file:" + f.getName());
+            }
         }
         return reports;
     }
