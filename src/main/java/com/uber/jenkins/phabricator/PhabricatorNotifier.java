@@ -163,34 +163,6 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
 
         CoverageProvider coverageProvider;
 
-        // Handle non-differential build invocations. If PHID is present but DIFF_ID is not, it means somebody is doing
-        // a Harbormaster build on a commit rather than a differential, but still wants build status.
-        // If DIFF_ID is present but PHID is not, it means somebody is doing a Differential build without Harbormaster.
-        // So only skip build result processing if both are blank (e.g. master runs to update coverage data)
-        if (CommonUtils.isBlank(phid) && !isDifferential) {
-            if (needsDecoration) {
-                build.addAction(PhabricatorPostbuildAction.createShortText(this.gitBranch, null));
-            }
-
-            coverageProvider = getCoverageProvider(build, workspace, listener, Collections.emptySet());
-            CodeCoverageMetrics coverageResult = null;
-            if (coverageProvider != null) {
-                coverageResult = coverageProvider.getMetrics();
-            }
-
-            NonDifferentialBuildTask nonDifferentialBuildTask = new NonDifferentialBuildTask(
-                    logger,
-                    uberallsClient,
-                    coverageResult,
-                    uberallsEnabled,
-                    this.gitCommit
-            );
-
-            // Ignore the result.
-            nonDifferentialBuildTask.run();
-            return;
-        }
-
         ConduitAPIClient conduitClient;
         try {
             conduitClient = getConduitClient(build.getParent());
@@ -211,6 +183,16 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
         // Still do finalization to prevent manipulation
         final String buildUrl = whichBuildUrl;
 
+        // comment out to include all files in coverage calculation
+        // Set<String> includeFiles = diff.getChangedFiles();
+        Set<String> includeFiles = null;
+
+        coverageProvider = getCoverageProvider(build, workspace, listener, includeFiles);
+        CodeCoverageMetrics coverageResult = null;
+        if (coverageProvider != null) {
+            coverageResult = coverageProvider.getMetrics();
+        }
+
         if (!isDifferential) {
             Result buildResult;
             // In Pipeline jobs, as long as no failure happens, the build status stays null.
@@ -220,19 +202,34 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
             } else {
                 buildResult = build.getResult();
             }
-            // Process harbormaster for non-differential builds
-            Task.Result result = new NonDifferentialHarbormasterTask(
+
+            NonDifferentialBuildTask nonDifferentialBuildTask = new NonDifferentialBuildTask(
                     logger,
-                    phid,
-                    conduitClient,
-                    buildResult,
-                    buildUrl
-            ).run();
-            if (result == Task.Result.SUCCESS) {
-                return;
-            } else {
-                throw new AbortException();
+                    uberallsClient,
+                    coverageResult,
+                    uberallsEnabled,
+                    this.gitCommit
+            );
+
+            // Ignore the result.
+            nonDifferentialBuildTask.run();
+
+            if (!CommonUtils.isBlank(phid)) {
+                // Process harbormaster for non-differential builds
+                Task.Result result = new NonDifferentialHarbormasterTask(
+                                                                         logger,
+                                                                         phid,
+                                                                         conduitClient,
+                                                                         buildResult,
+                                                                         buildUrl
+                                                                         ).run();
+                if (result == Task.Result.SUCCESS) {
+                    return;
+                } else {
+                    throw new AbortException();
+                }
             }
+            return;
         }
 
         DifferentialClient diffClient = new DifferentialClient(diffID, conduitClient);
@@ -248,16 +245,6 @@ public class PhabricatorNotifier extends Notifier implements SimpleBuildStep {
 
         if (needsDecoration) {
             diff.decorate(build, this.getPhabricatorURL(build.getParent()));
-        }
-
-        // comment out to include all files in coverage calculation
-        // Set<String> includeFiles = diff.getChangedFiles();
-        Set<String> includeFiles = null;
-
-        coverageProvider = getCoverageProvider(build, workspace, listener, includeFiles);
-        CodeCoverageMetrics coverageResult = null;
-        if (coverageProvider != null) {
-            coverageResult = coverageProvider.getMetrics();
         }
 
         BuildResultProcessor resultProcessor = new BuildResultProcessor(
